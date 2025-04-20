@@ -3,9 +3,10 @@ import streamlit as st
 import pandas as pd
 import time
 from database import save_to_db, get_chat_history, get_db_count, clear_db
-from llm import generate_response
+from llm import generate_response, generate_response_image
 from data import create_sample_evaluation_data
 from metrics import get_metrics_descriptions
+from PIL import Image
 
 # --- チャットページのUI ---
 def display_chat_page(pipe):
@@ -56,6 +57,48 @@ def display_chat_page(pipe):
                   st.session_state.feedback_given = False
                   st.rerun() # 画面をクリア
 
+# ーーーーーーーーーーーーーーーーーーーーーー
+def display_chat_image_page(pipe):
+    """画像チャットのUI（Gemma 3 用）"""
+    st.subheader("説明させたい画像をアップロードしてください")
+
+    uploaded_image = st.file_uploader("画像ファイルを選択", type=["jpg", "jpeg", "png"])
+    submit_button = st.button("送信")
+
+    # セッション状態の初期化
+    if "current_answer" not in st.session_state:
+        st.session_state.current_answer = ""
+    if "response_time" not in st.session_state:
+        st.session_state.response_time = 0.0
+    if "feedback_given" not in st.session_state:
+        st.session_state.feedback_given = False
+
+    if submit_button and uploaded_image:
+        image = Image.open(uploaded_image).convert("RGB")
+        st.image(image, caption="アップロードされた画像", use_column_width=True)
+
+        with st.spinner("モデルが回答を生成中..."):
+            # Gemma3は画像入力もサポートするので、そのまま渡す
+            answer, response_time = generate_response_image(pipe, image)
+            st.session_state.current_answer = answer
+            st.session_state.response_time = response_time
+            st.session_state.feedback_given = False
+            st.rerun()
+
+    if st.session_state.current_answer:
+        st.subheader("回答:")
+        st.markdown(st.session_state.current_answer)
+        st.info(f"応答時間: {st.session_state.response_time:.2f}秒")
+
+        if not st.session_state.feedback_given:
+            display_feedback_form()
+        else:
+            if st.button("次の画像へ"):
+                st.session_state.current_answer = ""
+                st.session_state.response_time = 0.0
+                st.session_state.feedback_given = False
+                st.rerun()
+# ーーーーーーーーーーーーーーーーーーーーーー
 
 def display_feedback_form():
     """フィードバック入力フォームを表示する"""

@@ -32,7 +32,8 @@ def load_model():
         device = "cuda" if torch.cuda.is_available() else "cpu"
         st.info(f"Using device: {device}") # 使用デバイスを表示
         pipe = pipeline(
-            "text-generation",
+            # "text-generation",
+            "image-text-to-text",
             model=MODEL_NAME,
             model_kwargs={"torch_dtype": torch.bfloat16},
             device=device
@@ -48,6 +49,9 @@ pipe = llm.load_model()
 # --- Streamlit アプリケーション ---
 st.title("🤖 Gemma 3 Chatbot with Feedback")
 st.write("Gemmaモデルを使用したチャットボットです。回答に対してフィードバックを行えます。")
+# テキスト入力
+st.subheader("開発者の名前を入力")
+name = st.text_input("名前", "ゲスト")
 st.markdown("---")
 
 # --- サイドバー ---
@@ -58,14 +62,15 @@ if 'page' not in st.session_state:
 
 page = st.sidebar.radio(
     "ページ選択",
-    ["チャット", "履歴閲覧", "サンプルデータ管理"],
+    ["チャット","画像説明","履歴閲覧", "サンプルデータ管理"],
     key="page_selector",
-    index=["チャット", "履歴閲覧", "サンプルデータ管理"].index(st.session_state.page), # 現在のページを選択状態にする
+    index=["チャット","画像説明","履歴閲覧", "サンプルデータ管理"].index(st.session_state.page), # 現在のページを選択状態にする
     on_change=lambda: setattr(st.session_state, 'page', st.session_state.page_selector) # 選択変更時に状態を更新
 )
 
 
 # --- メインコンテンツ ---
+
 if st.session_state.page == "チャット":
     if pipe:
         ui.display_chat_page(pipe)
@@ -75,7 +80,9 @@ elif st.session_state.page == "履歴閲覧":
     ui.display_history_page()
 elif st.session_state.page == "サンプルデータ管理":
     ui.display_data_page()
+elif st.session_state.page == "画像説明":
+    ui.display_chat_image_page(pipe)
 
 # --- フッターなど（任意） ---
 st.sidebar.markdown("---")
-st.sidebar.info("開発者: [Your Name]")
+st.sidebar.info(f"開発者: {name}")
